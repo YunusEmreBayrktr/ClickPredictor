@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+
+<html lang="en">
+    
+    
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width", initial-scale="1.0">
+        <title>Click Predictor</title>
+        <style>
+            body {
+                text-align: center;
+                font-family: Arial, sans-serif;
+                margin: 100px;
+                background-color: black;
+                
+            }
+        </style>
+    </head>
+
+
+    <body>
+        
+        
+        <h1 style="color:rgb(255, 255, 255);">Click Predictor</h1>
+        <p style="color: rgb(255, 255, 255);">Left Clicks: <span id="leftClickCount">0</span></p>
+        <p style="color: rgb(255, 255, 255);">Right Clicks: <span id="rightClickCount">0</span></p>
+        <p style="color: rgb(255, 255, 255);">Naive Bayes Prediction: <span id="naivePrediction">None</span></p>
+        <p style="color: rgb(255, 255, 255);">Naive Bayes Accuracy: <span id="naiveAccuracy">0</span></p>
+        <p style="color: rgb(255, 255, 255);">N-gram Prediction: <span id="ngramPrediction">None</span></p>
+        <p style="color: rgb(255, 255, 255);">N-gram Accuracy: <span id="ngramAccuracy">0</span></p>
+        
+        <script>
+            class NaiveBayes {
+                constructor() {
+                    this.clickHistory = [[0,0]];
+                }
+            
+                train(clickType) {
+                    this.clickHistory.push(clickType);
+                }
+            
+                clickProbability(clickType) {
+                    // Count occurrences of the clickType in the clickHistory.
+                    const count = this.clickHistory.filter(click => click === clickType).length;
+                    // Calculate probability by dividing the count by the total number of clicks.
+                    return count / this.clickHistory.length;
+                }
+            
+                predict() {
+                    // Calculate probabilities for left and right clicks.
+                    const leftProb = this.clickProbability(0); 
+                    const rightProb = this.clickProbability(2); 
+                
+                    if (leftProb > rightProb) {
+                        return "Left";
+                    } 
+                    else if(leftProb == rightProb){
+                        return (this.clickHistory[clickHistory.length()-1][0] == 0 ? "Left" : "Right")
+                    }
+                    else {
+                        return "Right";
+                    }
+                }
+            }
+
+
+            class NGram {
+                constructor() {
+                    this.trigrams = {};
+                    this.window = [0, 0, 0];
+                    this.totalLeft = 0;
+                    this.totalRight = 0;
+                }
+            
+                train(clickType) {
+                    this.window[0] = this.window[1];
+                    this.window[1] = this.window[2];
+                    this.window[2] = clickType;
+                    const key = this.window.join(',');
+                    this.trigrams[key] = (this.trigrams[key] || 0) + 1;
+                    if (clickType === 0) {
+                        this.totalLeft++;
+                    } else if (clickType === 2) {
+                        this.totalRight++;
+                    }
+                }
+            
+                predict() {
+                    const leftProb = this.leftProb();
+                    const rightProb = this.rightProb();
+                    if (leftProb > rightProb) {
+                        return "Left";
+                    } else {
+                        return "Right";
+                    }
+                }
+            
+                leftProb() {
+                    const leftKey = [0, this.window[1], this.window[2]].join(',');
+                    const leftCount = this.trigrams[leftKey] || 0;
+                    return leftCount / this.totalLeft;
+                }
+            
+                rightProb() {
+                    const rightKey = [2, this.window[1], this.window[2]].join(',');
+                    const rightCount = this.trigrams[rightKey] || 0;
+                    return rightCount / this.totalRight;
+                }
+            }
+
+
+
+            
+            const naiveBayes = new NaiveBayes();   
+            const ngram = new NGram(5);          
+
+
+            let leftClickCount = 0;
+            let rightClickCount = 0;
+            let naiveCorrectPred = 0;
+            let ngramCorrectPred = 0;
+            let naivePred = 0;
+            let ngramPred = 0;
+
+
+            document.addEventListener('click', (event) => {
+                if (event.button === 0){
+                    if (naivePred == "Left"){naiveCorrectPred++}
+                    if (ngramPred == "Left"){ngramCorrectPred++}
+                    
+                    leftClickCount++;
+                    naiveBayes.train(event.button);
+                    ngram.train(event.button);
+                    document.getElementById("naivePrediction").textContent = naiveBayes.predict();
+                    document.getElementById("ngramPrediction").textContent = ngram.predict(leftClickCount,rightClickCount);
+                    document.getElementById("leftClickCount").textContent = leftClickCount;
+                    document.getElementById("naiveAccuracy").textContent = (naiveCorrectPred/(leftClickCount+rightClickCount)).toFixed(2)
+                    document.getElementById("ngramAccuracy").textContent = (ngramCorrectPred/(leftClickCount+rightClickCount)).toFixed(2)
+                    naivePred = naiveBayes.predict();
+                    ngramPred = ngram.predict(leftClickCount,rightClickCount);
+                }
+            });
+
+
+            document.addEventListener('contextmenu', (event) => {
+                event.preventDefault();
+
+                if (event.button === 2){
+                    if (naivePred == "Right"){naiveCorrectPred++}
+                    if (ngramPred == "Right"){ngramCorrectPred++}
+                    
+                    rightClickCount++;
+                    naiveBayes.train(event.button);
+                    ngram.train(event.button);
+                    document.getElementById("naivePrediction").textContent = naiveBayes.predict();
+                    document.getElementById("ngramPrediction").textContent = ngram.predict(leftClickCount,rightClickCount);
+                    document.getElementById("rightClickCount").textContent = rightClickCount;
+                    document.getElementById("naiveAccuracy").textContent = (naiveCorrectPred/(leftClickCount+rightClickCount)).toFixed(2)
+                    document.getElementById("ngramAccuracy").textContent = (ngramCorrectPred/(leftClickCount+rightClickCount)).toFixed(2)
+                    naivePred = naiveBayes.predict();
+                    ngramPred = ngram.predict(leftClickCount,rightClickCount); 
+                }
+            });
+
+        </script>
+    
+    </body>
+
+</html>
